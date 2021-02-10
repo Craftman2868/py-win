@@ -1,0 +1,6 @@
+title: coucou
+
+widgets:
+  - type: button
+    text: aaa
+    action: test
