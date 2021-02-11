@@ -6,5 +6,3 @@ class App(App):
         window = self.create_window(mainInterface)
 
         window.open()
-
-        print(self.root)

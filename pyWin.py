@@ -131,7 +131,6 @@ class _Window:
             self._iconPath = "./defaultIcon.ico"
             self._window.iconbitmap(self._iconPath)
         self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
-        print(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
 
         self.widgets = []
         for mw in interface.widgets: self.widgets.append(_Widget(self, mw))
