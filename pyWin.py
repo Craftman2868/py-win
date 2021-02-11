@@ -91,7 +91,7 @@ class _Interface:
         self.events = _get_if_exist(data, "events", [])
         size = _get_if_exist(data, "size", "200, 200").split(",")
         self.size = (int(size[0].strip()), int(size[1].strip()))
-        pos = _get_if_exist(data, "size", "").split(",")
+        pos = _get_if_exist(data, "pos", "").split(",")
         self.pos = (pos[0].strip(), pos[1].strip()) if pos != [""] else None
         self.widgets = []
         i = 0
@@ -131,6 +131,7 @@ class _Window:
             self._iconPath = "./defaultIcon.ico"
             self._window.iconbitmap(self._iconPath)
         self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
+        print(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
 
         self.widgets = []
         for mw in interface.widgets: self.widgets.append(_Widget(self, mw))
