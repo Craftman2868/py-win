@@ -3,6 +3,7 @@ from yaml import safe_load
 
 class InvalidWidgetError(Exception): pass
 class ScriptNotFoundError(Exception): pass
+class CommandNotFoundError(ScriptNotFoundError): pass
 
 def _get_if_exist(dict, key, or_ = None):
     try: return dict[key]
@@ -13,24 +14,55 @@ def _read_interface_file(path):
         data = safe_load(f) or {}
     return data
 
+class _MetaWidget:
+    def __init__(self, app, type, **kwargs):
+        self.app = app
+        self.type = type
+        self.args = kwargs
 
 class _Widget:
     nextId = 0
-    def __init__(self, app, type, **kwargs):
-        self.app = app
+    def __init__(self, window, meta):
+        self.window = window
+        self.app = meta.app
         self.id = _Widget.nextId
         _Widget.nextId += 1
-        self.type = type
-        self.args = kwargs.copy()
-        if "action" in kwargs:
+        self.type = meta.type
+        self.args = meta.args.copy()
+        self.var = tk.StringVar() if self.type in ["entry"] else None
+        if self.var: self.args["textvariable"] = self.var
+        self.binds = []
+        if "text" in self.args and self.var:
+            self.var.set(self.args["text"])
+            del self.args["text"]
+        if "action" in meta.args:
             del self.args["action"]
-            try:
-                getattr(app, "script_"+kwargs["action"])
-            except AttributeError:
-                raise ScriptNotFoundError(f"Script '{kwargs['action']}' not found")
-            self.args["command"] = lambda: getattr(app, "script_"+kwargs["action"])(app.windows[-1], self)
+            if self.type == "button":
+                try:
+                    getattr(self.app, "command_"+meta.args["action"])
+                except AttributeError:
+                    raise CommandNotFoundError(f"Command '{meta.args['action']}' not found")
+                self.args["command"] = lambda: getattr(self.app, "command_"+meta.args["action"])(self.window, self)
+            elif self.type == "entry":
+                try:
+                    getattr(self.app, "command_"+meta.args["action"])
+                except AttributeError:
+                    raise CommandNotFoundError(f"Command '{meta.args['action']}' not found")
+                self.binds.append(("Return", lambda e: getattr(self.app, "command_"+meta.args["action"])(self.window, self)))
+    def set(self, key, value):
+        if key == "text" and self.var:
+            self.var.set(value)
+            return
+        self.args[key] = value
+
+        i = self.window.widgets.index(self)
+        self.window._widgets[i].config(**{key: value})
+    def get_value(self):
+        if self.var: return self.var.get()
+    def set_value(self, value):
+        if self.var: self.var.set(value)
     def delete(self):
-        self.app.windows[-1]._delete_widget(self)
+        self.window._delete_widget(self)
 
 class _Interface:
     def __init__(self, app, path):
@@ -46,7 +78,7 @@ class _Interface:
                 del w["type"]
             except KeyError:
                 raise InvalidWidgetError(f"Invalid widget with id {i}")
-            self.widgets.append(_Widget(app, type, **w))
+            self.widgets.append(_MetaWidget(app, type, **w))
 
 class _Window:
     def __init__(self, app, interface, script):
@@ -58,20 +90,40 @@ class _Window:
         self.script = script
         self.title = interface.title
         self.size = interface.size
-        self.widgets = interface.widgets
 
         self._window.title(self.title)
         self._window.geometry(f"{self.size[0]}x{self.size[1]}")
+
+        self.widgets = []
+        for mw in interface.widgets: self.widgets.append(_Widget(self, mw))
+
         self._widgets = []
-        for w in self.widgets: self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+        for w in self.widgets:
+            self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+            for b in w.binds:
+                self._widgets[-1].bind("<"+b[0]+">", b[1])
         for w in self._widgets: w.pack()
 
         app.windows.append(self)
+    def run(self, script: str = ...):
+        if script == Ellipsis:
+            getattr(self.app, "script")(self)
+        else:
+            try:
+                getattr(self.app, "script_"+str(script))(self)
+            except AttributeError:
+               raise ScriptNotFoundError(f"Script '{script}' not found")
     def create_widget(self, type, **kwargs):
-        self.widgets.append(_Widget(self.app, type, **kwargs))
-        return self.widgets[-1]
+        self.widgets.append(_Widget(self, _MetaWidget(self.app, type,  **kwargs)))
+        w = self.widgets[-1]
+        self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+        self._widgets[-1].pack()
+        return w
     def _delete_widget(self, widget):
-        self.widgets.remove(widget)
+        i = self.widgets.index(widget)
+        del self.widgets[i]
+        self._widgets[i].destroy()
+        del self._widgets[i]
     def open(self):
         self._window.mainloop()
 
