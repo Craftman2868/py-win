@@ -106,7 +106,10 @@ class _Window:
 
         self._widgets = []
         for w in self.widgets:
-            self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+            try:
+                self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+            except tk._tkinter.TclError:
+                raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
             for b in w.binds:
                 self._widgets[-1].bind("<"+b[0]+">", b[1])
         for w in self._widgets: w.pack()
