@@ -1,5 +1,6 @@
 import tkinter as tk
 from yaml import safe_load
+from PIL.Image import open as openImg
 
 class InvalidWidgetError(Exception): pass
 class ScriptNotFoundError(Exception): pass
@@ -68,6 +69,7 @@ class _Interface:
     def __init__(self, app, path):
         data = _read_interface_file(path)
         self.title = _get_if_exist(data, "title", "PyWinApp")
+        self.icon = _get_if_exist(data, "icon", None)
         size = _get_if_exist(data, "size", "500, 300").split(",")
         self.size = (int(size[0].strip()), int(size[1].strip()))
         self.widgets = []
@@ -87,11 +89,17 @@ class _Window:
             self._window = tk.Toplevel(app.windows[0]._window)
         else:
             self._window = tk.Tk()
-        self.title = interface.title
-        self.size = interface.size
+        self.interface = interface
+        self._title = interface.title
+        self._iconPath = self.app.path+"/"+(interface.icon or "icon.ico")
+        self._size = interface.size
 
-        self._window.title(self.title)
-        self._window.geometry(f"{self.size[0]}x{self.size[1]}")
+        self._window.title(self._title)
+        try: self._window.iconbitmap(self._iconPath)
+        except tk._tkinter.TclError:
+            self._iconPath = "./defaultIcon.ico"
+            self._window.iconbitmap(self._iconPath)
+        self._window.geometry(f"{self._size[0]}x{self._size[1]}")
 
         self.widgets = []
         for mw in interface.widgets: self.widgets.append(_Widget(self, mw))
@@ -104,6 +112,17 @@ class _Window:
         for w in self._widgets: w.pack()
 
         app.windows.append(self)
+    @property
+    def title(self):
+        return self._title
+    @title.setter
+    def title(self, title):
+        self._title = title
+        self._window.title(self._title)
+    @title.deleter
+    def title(self, title):
+        self._title = self.interface.title
+        self._window.title(self._title)
     def run(self, script: str = ...):
         if script == Ellipsis:
             getattr(self.app, "script")(self)
