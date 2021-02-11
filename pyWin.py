@@ -81,13 +81,12 @@ class _Interface:
             self.widgets.append(_MetaWidget(app, type, **w))
 
 class _Window:
-    def __init__(self, app, interface, script):
+    def __init__(self, app, interface):
         self.app = app
         if len(app.windows) >= 1:
-            self._window = tk.Toplevel(app.windows[0])
+            self._window = tk.Toplevel(app.windows[0]._window)
         else:
             self._window = tk.Tk()
-        self.script = script
         self.title = interface.title
         self.size = interface.size
 
@@ -126,6 +125,9 @@ class _Window:
         del self._widgets[i]
     def open(self):
         self._window.mainloop()
+    def close(self):
+        self._window.destroy()
+        del self.app.windows[self.app.windows.index(self)]
 
 class App:
     def __init__(self, path):
@@ -134,12 +136,10 @@ class App:
         self.run()
     def get_interface(self, name):
         return _Interface(self, self.path+"/interface/"+name+".yaml")
-    def get_window(self, interface: _Interface):
-        return _Window(self, interface, self.script)
-    def script(self, win):
-        pass
-    def run(self):
-        pass
+    def create_window(self, interface: _Interface):
+        return _Window(self, interface)
+    def script(self, win): pass
+    def run(self): pass
 
 if __name__ == "__main__":
     from sys import argv
