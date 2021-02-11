@@ -60,7 +60,7 @@ class _Widget:
         if "events" in meta.args:
             del self.args["events"]
             for e in meta.args:
-                self.binds.append((e[0], self.app.get_command(e[1])))
+                self.binds.append((e[0], e[1]))
         if "action" in meta.args:
             del self.args["action"]
             if self.type == "button":
@@ -88,8 +88,11 @@ class _Interface:
         data = _read_interface_file(path)
         self.title = _get_if_exist(data, "title", "PyWinApp")
         self.icon = _get_if_exist(data, "icon", None)
-        size = _get_if_exist(data, "size", "500, 300").split(",")
+        self.events = _get_if_exist(data, "events", [])
+        size = _get_if_exist(data, "size", "200, 200").split(",")
         self.size = (int(size[0].strip()), int(size[1].strip()))
+        pos = _get_if_exist(data, "size", "").split(",")
+        self.pos = (pos[0].strip(), pos[1].strip()) if pos != [""] else None
         self.widgets = []
         i = 0
         for w in _get_if_exist(data, "widgets", []):
@@ -111,13 +114,23 @@ class _Window:
         self._title = interface.title
         self._iconPath = self.app.path+"/"+(interface.icon or "icon.ico")
         self._size = interface.size
+        self._pos = interface.pos
+
+        load = []
+        for b in interface.events:
+            if type(b) == str:
+                b = b.split(" ")
+            if b[0] == "load":
+                load = b[1:]
+                continue
+            self._window.bind("<"+b[0].title()+">", lambda e: self.app.get_script(b[1])(self))
 
         self._window.title(self._title)
         try: self._window.iconbitmap(self._iconPath)
         except tk._tkinter.TclError:
             self._iconPath = "./defaultIcon.ico"
             self._window.iconbitmap(self._iconPath)
-        self._window.geometry(f"{self._size[0]}x{self._size[1]}")
+        self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
 
         self.widgets = []
         for mw in interface.widgets: self.widgets.append(_Widget(self, mw))
@@ -129,7 +142,9 @@ class _Window:
             except tk._tkinter.TclError:
                 raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
             for b in w.binds:
-                self._widgets[-1].bind("<"+b[0]+">", b[1])
+                if type(b) == str:
+                    b = b.split(" ")
+                self._widgets[-1].bind("<"+b[0].title()+">", lambda e: self.app.get_command(b[1])(self, w))
         for w, _w in zip(self.widgets, self._widgets):
             if w.pos[0] == "pack":
                 _w.pack(side=w.pos[1])
@@ -138,6 +153,10 @@ class _Window:
 
         self.__del__ = self.close
         app.windows.append(self)
+
+        self.app.get_script()(self)
+
+        for s in load: self.app.get_script(s)(self)
     @property
     def title(self):
         return self._title
@@ -183,6 +202,9 @@ class App:
         self.path = path
         self.windows = []
         self.run()
+    @property
+    def root(self):
+        return self.windows[0] if len(self.windows) >= 1 else None
     def get_interface(self, name):
         return _Interface(self, self.path+"/interface/"+name+".yaml")
     def create_window(self, interface: _Interface):
@@ -200,6 +222,9 @@ class App:
             raise ScriptNotFoundError(f"Script '{script}' not found")
     def script(self, win): pass
     def run(self): pass
+    def __call__(self, name):
+        self.create_window(self.get_interface(name)).open()
+        return self.windows[-1]
     def __repr__(self):
         return f"<pyWin.App at {hex(id(self))} path: '{self.path}' windows: {self.windows}>"
 

@@ -3,8 +3,8 @@ from pyWin import App
 class App(App):
     def run(self):
         mainInterface = self.get_interface("main")
-        win = self.create_window(mainInterface)
+        window = self.create_window(mainInterface)
 
-        win.open()
-    def command_test(self, window, widget):
-        window.close()
+        window.open()
+
+        print(self.root)
