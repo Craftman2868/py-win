@@ -1,6 +1,5 @@
 title: coucou
 
 widgets:
-  - type: button
-    text: aaa
+  - type: entry
     action: test
