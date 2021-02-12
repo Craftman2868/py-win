@@ -128,6 +128,7 @@ Cette classe n'a pas de methodes
 |back|[int n]|-|Retire n caractères à la variable du widget (s'il à une variable)|
 |clear|-|-|Efface la valeur de la variable du widget (s'il à une variable)|
 |delete|-|-|Supprime le widget|
+|focus|-|-|Focus le widget en question|
 
 - Attributs
 
