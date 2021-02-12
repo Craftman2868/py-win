@@ -1,7 +1,7 @@
 title: Exemple
 
 widgets:
-  - type: text
-    text: "bonjour"
-    events:
-      - space test
+  - type: entry
+    action: valid
+  - type: label
+    tag: result

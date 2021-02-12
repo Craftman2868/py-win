@@ -6,5 +6,10 @@ class App(App):
         window = self.create_window(mainInterface)
 
         window.open()
-    def command_test(self, window, widget):
-        widget.insert("yes" if self.yesno("Coucou") else "no")
+    def command_valid(self, window, widget):
+        command = widget.get_value()
+        if command == "exit":
+            window.close()
+        elif command == "test":
+            print(window["result"].type)
+            window["result"].set_value("Ca marche !!!")

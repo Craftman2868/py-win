@@ -34,15 +34,12 @@ class _Widget:
         _Widget.nextId += 1
         self.type = meta.type
         self.args = meta.args.copy()
-        self.var = tk.StringVar() if self.type in ["entry", "text"] else None
+        self.var = tk.StringVar() if self.type in ["entry", "text", "label"] else None
         if self.var: self.args["textvariable"] = self.var
         self.binds = []
         self.text = None
-        if "text" in self.args:
-            if self.var:
-                self.var.set(self.args["text"])
-            if self.type == "text":
-                self.text = self.args["text"]
+        if "text" in self.args and self.var:
+            self.var.set(self.args["text"])
             del self.args["text"]
         if "pos" in meta.args:
             del self.args["pos"]
@@ -73,8 +70,12 @@ class _Widget:
             del self.args["action"]
             if self.type == "button":
                 self.args["command"] = lambda: self.app.get_command(meta.args["action"])(self.window, self)
-            elif self.type in ["entry", "text"]:
+            elif self.type in ["entry", "text", "label"]:
                 self.binds.append(("Return", meta.args["action"]))
+        if "tag" in meta.args:
+            del self.args["tag"]
+            self.tag = meta.args["tag"]
+            self.window._tags[self.tag] = self
     def set(self, key, value):
         if key == "text" and self.var:
             self.var.set(value)
@@ -183,6 +184,7 @@ class _Interface:
 
 class _Window:
     def __init__(self, app, interface):
+        self._tags = {}
         self.app = app
         if len(app.windows) >= 1:
             self._window = tk.Toplevel(app.windows[0]._window)
@@ -233,7 +235,7 @@ class _Window:
                 if type(b) == str:
                     b = b.split(" ")
                 try:
-                    self._widgets[-1].bind("<"+b[0]+">", lambda e: self.app.get_command(b[1])(self, w))
+                    self._widgets[-1].bind("<"+b[0]+">", lambda e, w=w: self.app.get_command(b[1])(self, w))
                 except tk._tkinter.TclError:
                     raise InvalidEventError(f"Invalid event '{b[0]}'")
         for w, _w in zip(self.widgets, self._widgets):
@@ -242,7 +244,6 @@ class _Window:
             elif w.pos[0] == "place":
                 _w.place(x=w.pos[1], y=w.pos[2])
 
-        self.__del__ = self.close
         app.windows.append(self)
 
         self.app.get_script()(self)
@@ -287,6 +288,8 @@ class _Window:
         self._window.destroy()
     def __repr__(self):
         return f"<pyWin._Window at {hex(id(self))} title: '{self._title}' size: {self._size} icon: "+("'"+self._iconPath+"'" if self._iconPath != './defaultIcon.ico' else 'defaultIcon')+">"
+    def __getitem__(self, item):
+        return self._tags[item]
 
 class App:
     def __init__(self, path):
