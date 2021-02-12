@@ -55,6 +55,8 @@ class _Widget:
                         self.pos = ("pack", "top")
                 elif posType == "place":
                     self.pos = ("place", pos[1], pos[2])
+                elif posType == "grid":
+                    self.pos = ("grid", pos[1], pos[2])
                 else:
                     raise InvalidWidgetError(f"Invalid widget with id {self.id}, invalid position type '{posType}'")
             except IndexError:
@@ -245,6 +247,8 @@ class _Window:
                 _w.pack(side=w.pos[1])
             elif w.pos[0] == "place":
                 _w.place(x=w.pos[1], y=w.pos[2])
+            elif w.pos[0] == "grid":
+                _w.grid(row=w.pos[1], column=w.pos[2])
 
         app.windows.append(self)
 
