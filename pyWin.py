@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.messagebox as msgbox
 from yaml import safe_load
 from PIL.Image import open as openImg
 
@@ -18,7 +19,7 @@ def _read_interface_file(path):
 class _MetaWidget:
     def __init__(self, app, type, **kwargs):
         self.app = app
-        self.type = type
+        self.type = type.lower()
         self.args = kwargs
 
 class _Widget:
@@ -30,11 +31,15 @@ class _Widget:
         _Widget.nextId += 1
         self.type = meta.type
         self.args = meta.args.copy()
-        self.var = tk.StringVar() if self.type in ["entry"] else None
+        self.var = tk.StringVar() if self.type in ["entry", "text"] else None
         if self.var: self.args["textvariable"] = self.var
         self.binds = []
-        if "text" in self.args and self.var:
-            self.var.set(self.args["text"])
+        self.text = None
+        if "text" in self.args:
+            if self.var:
+                self.var.set(self.args["text"])
+            if self.type == "text":
+                self.text = self.args["text"]
             del self.args["text"]
         if "pos" in meta.args:
             del self.args["pos"]
@@ -59,14 +64,14 @@ class _Widget:
             self.pos = ("pack", "top")
         if "events" in meta.args:
             del self.args["events"]
-            for e in meta.args:
-                self.binds.append((e[0], e[1]))
+            for e in meta.args["events"]:
+                self.binds.append(e)
         if "action" in meta.args:
             del self.args["action"]
             if self.type == "button":
                 self.args["command"] = lambda: self.app.get_command(meta.args["action"])(self.window, self)
-            elif self.type == "entry":
-                self.binds.append(("Return", lambda e: self.app.get_command(meta.args["action"])(self.window, self)))
+            elif self.type in ["entry", "text"]:
+                self.binds.append(("Return", meta.args["action"]))
     def set(self, key, value):
         if key == "text" and self.var:
             self.var.set(value)
@@ -79,9 +84,78 @@ class _Widget:
         if self.var: return self.var.get()
     def set_value(self, value):
         if self.var: self.var.set(value)
+    def insert(self, text):
+        if self.var: self.set_value(self.get_value()+text)
+    def back(self, n):
+        if self.var: self.set_value(self.get_value()[0:-n])
+    def clear(self):
+        if self.var: self.set_value("")
     def delete(self):
         self.window._delete_widget(self)
         if self.id == _Widget.nextId-1: _Widget.nextId -= 1
+
+class _TextWidget(tk.Text):
+    def __init__(self, parent, *args, **kwargs):
+        try:
+            self._textvariable = kwargs.pop("textvariable")
+        except KeyError:
+            self._textvariable = None
+
+        tk.Text.__init__(self, parent, *args, **kwargs)
+
+        # if the variable has data in it, use it to initialize
+        # the widget
+        if self._textvariable is not None:
+            self.insert("1.0", self._textvariable.get())
+
+        # this defines an internal proxy which generates a
+        # virtual event whenever text is inserted or deleted
+        self.tk.eval('''
+            proc widget_proxy {widget widget_command args} {
+
+                # call the real tk widget command with the real args
+                set result [uplevel [linsert $args 0 $widget_command]]
+
+                # if the contents changed, generate an event we can bind to
+                if {([lindex $args 0] in {insert replace delete})} {
+                    event generate $widget <<Change>> -when tail
+                }
+                # return the result from the real widget command
+                return $result
+            }
+            ''')
+
+        # this replaces the underlying widget with the proxy
+        self.tk.eval('''
+            rename {widget} _{widget}
+            interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
+        '''.format(widget=str(self)))
+
+        # set up a binding to update the variable whenever
+        # the widget changes
+        self.bind("<<Change>>", self._on_widget_change)
+
+        # set up a trace to update the text widget when the
+        # variable changes
+        if self._textvariable is not None:
+            self._textvariable.trace("wu", self._on_var_change)
+
+    def _on_var_change(self, *args):
+        '''Change the text widget when the associated textvariable changes'''
+
+        # only change the widget if something actually
+        # changed, otherwise we'll get into an endless
+        # loop
+        text_current = self.get("1.0", "end-1c")
+        var_current = self._textvariable.get()
+        if text_current != var_current:
+            self.delete("1.0", "end")
+            self.insert("1.0", var_current)
+
+    def _on_widget_change(self, event=None):
+        '''Change the variable when the widget changes'''
+        if self._textvariable is not None:
+            self._textvariable.set(self.get("1.0", "end-1c"))
 
 class _Interface:
     def __init__(self, app, path):
@@ -133,18 +207,25 @@ class _Window:
         self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
 
         self.widgets = []
-        for mw in interface.widgets: self.widgets.append(_Widget(self, mw))
+        for mw in interface.widgets:
+            self.widgets.append(_Widget(self, mw))
 
         self._widgets = []
         for w in self.widgets:
             try:
-                self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
-            except tk._tkinter.TclError:
+                if w.type == "text":
+                    self._widgets.append(_TextWidget(self._window, **w.args))
+                else:
+                    self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+            except tk._tkinter.TclError as e:
+                if e.args[0].startswith("unknown option"):
+                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, "+e.args[0].replace('"', "'").replace("-", ""))
                 raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
+            _w = self._widgets[-1]
             for b in w.binds:
                 if type(b) == str:
                     b = b.split(" ")
-                self._widgets[-1].bind("<"+b[0].title()+">", lambda e: self.app.get_command(b[1])(self, w))
+                self._widgets[-1].bind("<"+b[0]+">", lambda e: self.app.get_command(b[1])(self, w))
         for w, _w in zip(self.widgets, self._widgets):
             if w.pos[0] == "pack":
                 _w.pack(side=w.pos[1])
@@ -222,6 +303,27 @@ class App:
             raise ScriptNotFoundError(f"Script '{script}' not found")
     def script(self, win): pass
     def run(self): pass
+    def error(self, message, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.showerror(title, message)
+    def info(self, message, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.showinfo(title, message)
+    def warning(self, message, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.showwarning(title, message)
+    def yesno(self, question, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.askyesno(title, question)
+    def okcancel(self, message, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.askokcancel(title, message)
+    def retrycancel(self, message, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.askretrycancel(title, message)
+    def yesnocancel(self, question, title=...):
+        if title == Ellipsis: title = self.path.split("/")[-1]
+        return msgbox.askyesnocancel(title, question)
     def __call__(self, name):
         self.create_window(self.get_interface(name)).open()
         return self.windows[-1]

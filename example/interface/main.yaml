@@ -1,1 +1,7 @@
-pos: 0, 0
+title: Exemple
+
+widgets:
+  - type: text
+    text: "bonjour"
+    events:
+      - space test
