@@ -39,7 +39,7 @@ widgets:
     tag: result
 ```
 
-- command : `python pyWin.py c:/example`
+- Command : `python pyWin.py c:/example`
 
 - Résultat
 
@@ -97,6 +97,9 @@ Classes
 |interface|Interface|Interface de la fenêtre|
 |widgets|list\<Widget\>|Widgets de la fenêtre|
 |title|str|Titre de la fenêtre|
+|size|tuple(int, int)|Taille de la fenêtre|
+|pos|tuple(int, int)|Position de la fenêtre|
+|icon|str|Chemin de l'icone de la fenêtre|
 
 > Interface
 
