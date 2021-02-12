@@ -4,6 +4,7 @@ from yaml import safe_load
 from PIL.Image import open as openImg
 
 class InvalidWidgetError(Exception): pass
+class InvalidEventError(Exception): pass
 class ScriptNotFoundError(Exception): pass
 class CommandNotFoundError(ScriptNotFoundError): pass
 
@@ -12,8 +13,10 @@ def _get_if_exist(dict, key, or_ = None):
     except KeyError: return or_
 
 def _read_interface_file(path):
-    with open(path, "r") as f:
-        data = safe_load(f) or {}
+    try:
+        with open(path, "r") as f: data = safe_load(f) or {}
+    except FileNotFoundError:
+        raise FileNotFoundError(f"No such file or directory: '{path}'")
     return data
 
 class _MetaWidget:
@@ -198,7 +201,10 @@ class _Window:
             if b[0] == "load":
                 load = b[1:]
                 continue
-            self._window.bind("<"+b[0].title()+">", lambda e: self.app.get_script(b[1])(self))
+            try:
+                self._window.bind("<"+b[0]+">", lambda e: self.app.get_script(b[1])(self))
+            except tk._tkinter.TclError:
+                raise InvalidEventError(f"Invalid event '{b[0]}'")
 
         self._window.title(self._title)
         try: self._window.iconbitmap(self._iconPath)
@@ -226,7 +232,10 @@ class _Window:
             for b in w.binds:
                 if type(b) == str:
                     b = b.split(" ")
-                self._widgets[-1].bind("<"+b[0]+">", lambda e: self.app.get_command(b[1])(self, w))
+                try:
+                    self._widgets[-1].bind("<"+b[0]+">", lambda e: self.app.get_command(b[1])(self, w))
+                except tk._tkinter.TclError:
+                    raise InvalidEventError(f"Invalid event '{b[0]}'")
         for w, _w in zip(self.widgets, self._widgets):
             if w.pos[0] == "pack":
                 _w.pack(side=w.pos[1])
@@ -333,8 +342,12 @@ class App:
 
 if __name__ == "__main__":
     from sys import argv
-    from importlib import import_module
+    from importlib.machinery import SourceFileLoader
 
     if len(argv) > 1:
-        app = import_module(argv[1].replace("/", ".")+".main")
+        if argv[1][-1] == "/": argv[1] = argv[1][0:-1]
+        try:
+            app = SourceFileLoader("main.App", argv[1]+"/main.py").load_module()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"No such file or directory: '{argv[1]+'/main.py'}'")
         app.App(argv[1])
