@@ -47,6 +47,8 @@ widgets:
 -
 <img src="ex2.png" width="150">
 
+Documentation
+
 Classes
 
 > App
