@@ -1,7 +1,6 @@
 import tkinter as tk
 import tkinter.messagebox as msgbox
 from yaml import safe_load
-from PIL.Image import open as openImg
 import os.path, sys
 
 class InvalidWidgetError(Exception): pass
@@ -12,13 +11,6 @@ class CommandNotFoundError(ScriptNotFoundError): pass
 def _get_if_exist(dict, key, or_ = None):
     try: return dict[key]
     except KeyError: return or_
-
-def _read_interface_file(path):
-    try:
-        with open(path, "r") as f: data = safe_load(f) or {}
-    except FileNotFoundError:
-        raise FileNotFoundError(f"No such file or directory: '{path}'")
-    return data
 
 class _MetaWidget:
     def __init__(self, app, type, **kwargs):
@@ -168,7 +160,10 @@ class _TextWidget(tk.Text):
 
 class _Interface:
     def __init__(self, app, path):
-        data = _read_interface_file(path)
+        try:
+            with open(path, "r") as f: data = safe_load(f) or {}
+        except FileNotFoundError:
+            raise FileNotFoundError(f"No such file or directory: '{path}'")
         self.title = _get_if_exist(data, "title", "PyWinApp")
         self.icon = _get_if_exist(data, "icon", None)
         self.events = _get_if_exist(data, "events", [])
@@ -321,6 +316,8 @@ class _Window:
             self.widgets[-1].pack(side=w.pos[1])
         elif w.pos[0] == "place":
             self.widgets[-1].place(x=w.pos[1], y=w.pos[2])
+        elif w.pos[0] == "grid":
+            self.widgets[-1].grid(row=w.pos[1], column=w.pos[2])
         return w
     def _delete_widget(self, widget):
         i = self.widgets.index(widget)
@@ -333,8 +330,6 @@ class _Window:
     def close(self):
         del self.app.windows[self.app.windows.index(self)]
         self._window.destroy()
-    def __repr__(self):
-        return f"<pyWin._Window at {hex(id(self))} title: '{self._title}' size: {self._size} icon: "+("'"+self._iconPath+"'" if self._iconPath != './defaultIcon.ico' else 'defaultIcon')+">"
     def __getitem__(self, item):
         return self._tags[item]
 
@@ -384,11 +379,6 @@ class App:
     def yesnocancel(self, question, title=...):
         if title == Ellipsis: title = self.path.split("/")[-1]
         return msgbox.askyesnocancel(title, question)
-    def __call__(self, name):
-        self.create_window(self.get_interface(name)).open()
-        return self.windows[-1]
-    def __repr__(self):
-        return f"<pyWin.App at {hex(id(self))} path: '{self.path}' windows: {self.windows}>"
 
 if __name__ == "__main__":
     from importlib.machinery import SourceFileLoader
@@ -400,3 +390,5 @@ if __name__ == "__main__":
         except FileNotFoundError:
             raise FileNotFoundError(f"No such file or directory: '{sys.argv[1]+'/main.py'}'")
         app.App(sys.argv[1])
+    else:
+        print("Usage: python pyWin.py <folderPath>")
