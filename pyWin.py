@@ -94,6 +94,7 @@ class _Widget:
         self.window._delete_widget(self)
         if self.id == _Widget.nextId-1: _Widget.nextId -= 1
 
+# Code récupéré sur stackoverflow (Ne me juge pas)
 class _TextWidget(tk.Text):
     def __init__(self, parent, *args, **kwargs):
         try:
