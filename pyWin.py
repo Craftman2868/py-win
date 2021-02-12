@@ -173,8 +173,17 @@ class _Interface:
         self.events = _get_if_exist(data, "events", [])
         size = _get_if_exist(data, "size", "200, 200").split(",")
         self.size = (int(size[0].strip()), int(size[1].strip()))
-        pos = _get_if_exist(data, "pos", "").split(",")
-        self.pos = (pos[0].strip(), pos[1].strip()) if pos != [""] else None
+        pos = _get_if_exist(data, "pos", None)
+        if pos:
+            if pos == "center":
+                self.pos = "center"
+            elif pos == "auto":
+                self.pos = None
+            else:
+                pos = pos.split(",")
+                self.pos = (pos[0].strip(), pos[1].strip())
+        else:
+            self.pos = None
         self.widgets = []
         i = 0
         for w in _get_if_exist(data, "widgets", []):
@@ -216,7 +225,10 @@ class _Window:
         except tk._tkinter.TclError:
             self._iconPath = "./defaultIcon.ico"
             self._window.iconbitmap(self._iconPath)
-        self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
+        if self._pos != "center":
+            self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
+        else:
+            self._window.geometry(f"{self._size[0]}x{self._size[1]}+{int(self._window.winfo_screenwidth()/2 - self._size[0]/2)}+{int((self._window.winfo_screenheight()-20)/2 - (self._size[1]+10)/2)}")
 
         self.widgets = []
         for mw in interface.widgets:
@@ -288,6 +300,7 @@ class _Window:
         self._widgets[i].destroy()
         del self._widgets[i]
     def open(self):
+        self._window.focus()
         self._window.mainloop()
     def close(self):
         del self.app.windows[self.app.windows.index(self)]

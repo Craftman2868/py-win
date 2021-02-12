@@ -4,14 +4,14 @@ class App(App):
     def run(self):
         mainInterface = self.get_interface("main")
         window = self.create_window(mainInterface)
+        window["command"].focus()
 
         window.open()
     def command_valid(self, window, widget):
-        widget.focus()
-        command = widget.get_value()
+        command = window["command"].get_value()
         window["result"].set("bg", "SystemButtonFace")
         window["result"].set("fg", "black")
-        widget.clear()
+        window["command"].clear()
         if command != "":
             if command == "exit":
                 window.close()

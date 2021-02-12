@@ -3,5 +3,6 @@ title: Command
 widgets:
   - type: entry
     action: valid
+    tag: command
   - type: label
     tag: result
