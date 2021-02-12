@@ -81,8 +81,7 @@ class _Widget:
             return
         self.args[key] = value
 
-        i = self.window.widgets.index(self)
-        self.window._widgets[i].config(**{key: value})
+        self.window._widgets[self.window.widgets.index(self)].config(**{key: value})
     def get_value(self):
         if self.var: return self.var.get()
     def set_value(self, value):
@@ -93,6 +92,8 @@ class _Widget:
         if self.var: self.set_value(self.get_value()[0:-n])
     def clear(self):
         if self.var: self.set_value("")
+    def focus(self):
+        self.window._widgets[self.window.widgets.index(self)].focus()
     def delete(self):
         self.window._delete_widget(self)
         if self.id == _Widget.nextId-1: _Widget.nextId -= 1
@@ -227,9 +228,10 @@ class _Window:
                 else:
                     self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
             except tk._tkinter.TclError as e:
-                if e.args[0].startswith("unknown option"):
-                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, "+e.args[0].replace('"', "'").replace("-", ""))
-                raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
+                if e.args[0].startswith("invalid command name"):
+                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
+                else:
+                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, "+e.args[0].replace('"', "'"))
             _w = self._widgets[-1]
             for b in w.binds:
                 if type(b) == str:

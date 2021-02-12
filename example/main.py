@@ -7,7 +7,9 @@ class App(App):
 
         window.open()
     def command_valid(self, window, widget):
+        widget.focus()
         command = widget.get_value()
+        window["result"].set("bg", "SystemButtonFace")
         window["result"].set("fg", "black")
         widget.clear()
         if command != "":
@@ -16,7 +18,8 @@ class App(App):
             elif command == "test":
                 window["result"].set_value("Test")
             else:
-                window["result"].set("fg", "red")
+                window["result"].set("bg", "red")
+                window["result"].set("fg", "white")
                 window["result"].set_value("Command not found")
         else:
             window["result"].clear()
