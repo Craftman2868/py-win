@@ -8,8 +8,15 @@ class App(App):
         window.open()
     def command_valid(self, window, widget):
         command = widget.get_value()
-        if command == "exit":
-            window.close()
-        elif command == "test":
-            print(window["result"].type)
-            window["result"].set_value("Ca marche !!!")
+        window["result"].set("fg", "black")
+        widget.clear()
+        if command != "":
+            if command == "exit":
+                window.close()
+            elif command == "test":
+                window["result"].set_value("Test")
+            else:
+                window["result"].set("fg", "red")
+                window["result"].set_value("Command not found")
+        else:
+            window["result"].clear()

@@ -37,7 +37,6 @@ class _Widget:
         self.var = tk.StringVar() if self.type in ["entry", "text", "label"] else None
         if self.var: self.args["textvariable"] = self.var
         self.binds = []
-        self.text = None
         if "text" in self.args and self.var:
             self.var.set(self.args["text"])
             del self.args["text"]
@@ -69,7 +68,7 @@ class _Widget:
         if "action" in meta.args:
             del self.args["action"]
             if self.type == "button":
-                self.args["command"] = lambda: self.app.get_command(meta.args["action"])(self.window, self)
+                self.args["command"] = lambda: self.window.cmd(meta.args["action"], self)
             elif self.type in ["entry", "text", "label"]:
                 self.binds.append(("Return", meta.args["action"]))
         if "tag" in meta.args:
@@ -90,13 +89,14 @@ class _Widget:
         if self.var: self.var.set(value)
     def insert(self, text):
         if self.var: self.set_value(self.get_value()+text)
-    def back(self, n):
+    def back(self, n=1):
         if self.var: self.set_value(self.get_value()[0:-n])
     def clear(self):
         if self.var: self.set_value("")
     def delete(self):
         self.window._delete_widget(self)
         if self.id == _Widget.nextId-1: _Widget.nextId -= 1
+        if self.tag: del self.window._tags[self.tag]
 
 # Code récupéré sur stackoverflow (Ne me juge pas)
 class _TextWidget(tk.Text):
@@ -192,7 +192,7 @@ class _Window:
             self._window = tk.Tk()
         self.interface = interface
         self._title = interface.title
-        self._iconPath = self.app.path+"/"+(interface.icon or "icon.ico")
+        self._iconPath = ((self.app.path+"/"+interface.icon) if not interface.icon.startswith("c:/") and not interface.icon.startswith("/") else interface.icon) if interface.icon else self.app.path+"/icon.ico"
         self._size = interface.size
         self._pos = interface.pos
 
@@ -204,7 +204,7 @@ class _Window:
                 load = b[1:]
                 continue
             try:
-                self._window.bind("<"+b[0]+">", lambda e: self.app.get_script(b[1])(self))
+                self._window.bind("<"+b[0]+">", lambda e: self.run(b[1]))
             except tk._tkinter.TclError:
                 raise InvalidEventError(f"Invalid event '{b[0]}'")
 
@@ -235,7 +235,7 @@ class _Window:
                 if type(b) == str:
                     b = b.split(" ")
                 try:
-                    self._widgets[-1].bind("<"+b[0]+">", lambda e, w=w: self.app.get_command(b[1])(self, w))
+                    self._widgets[-1].bind("<"+b[0]+">", lambda e, w=w: self.cmd(b[1], w))
                 except tk._tkinter.TclError:
                     raise InvalidEventError(f"Invalid event '{b[0]}'")
         for w, _w in zip(self.widgets, self._widgets):
@@ -246,9 +246,9 @@ class _Window:
 
         app.windows.append(self)
 
-        self.app.get_script()(self)
+        self.run()
 
-        for s in load: self.app.get_script(s)(self)
+        for s in load: self.run(s)
     @property
     def title(self):
         return self._title
