@@ -2,6 +2,7 @@ import tkinter as tk
 import tkinter.messagebox as msgbox
 from yaml import safe_load
 from PIL.Image import open as openImg
+import os.path, sys
 
 class InvalidWidgetError(Exception): pass
 class InvalidEventError(Exception): pass
@@ -224,7 +225,7 @@ class _Window:
         try:
             self._window.iconbitmap(self._iconPath)
         except tk._tkinter.TclError:
-            self._iconPath = "./defaultIcon.ico"
+            self._iconPath = os.path.join(sys.path[0], "./defaultIcon.ico")
             self._window.iconbitmap(self._iconPath)
         if self._pos != "center":
             self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
@@ -302,9 +303,8 @@ class _Window:
         self._iconPath = ((self.app.path+"/"+iconPath) if not iconPath.startswith("c:/") and not iconPath.startswith("/") else iconPath) if iconPath else self.app.path+"/icon.ico"
         try:
             self._window.iconbitmap(self._iconPath)
-        except tk._tkinter.TclError as e:
-            raise e
-            self._iconPath = "./defaultIcon.ico"
+        except tk._tkinter.TclError:
+            self._iconPath = os.path.join(sys.path[0], "./defaultIcon.ico")
             self._window.iconbitmap(self._iconPath)
     def run(self, script: str = ...):
         if script == Ellipsis:
@@ -391,13 +391,12 @@ class App:
         return f"<pyWin.App at {hex(id(self))} path: '{self.path}' windows: {self.windows}>"
 
 if __name__ == "__main__":
-    from sys import argv
     from importlib.machinery import SourceFileLoader
 
-    if len(argv) > 1:
-        if argv[1][-1] == "/": argv[1] = argv[1][0:-1]
+    if len(sys.argv) > 1:
+        if sys.argv[1][-1] == "/": sys.argv[1] = sys.argv[1][0:-1]
         try:
-            app = SourceFileLoader("main.App", argv[1]+"/main.py").load_module()
+            app = SourceFileLoader("main.App", sys.argv[1]+"/main.py").load_module()
         except FileNotFoundError:
-            raise FileNotFoundError(f"No such file or directory: '{argv[1]+'/main.py'}'")
-        app.App(argv[1])
+            raise FileNotFoundError(f"No such file or directory: '{sys.argv[1]+'/main.py'}'")
+        app.App(sys.argv[1])
