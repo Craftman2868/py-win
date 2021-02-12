@@ -221,7 +221,8 @@ class _Window:
                 raise InvalidEventError(f"Invalid event '{b[0]}'")
 
         self._window.title(self._title)
-        try: self._window.iconbitmap(self._iconPath)
+        try:
+            self._window.iconbitmap(self._iconPath)
         except tk._tkinter.TclError:
             self._iconPath = "./defaultIcon.ico"
             self._window.iconbitmap(self._iconPath)
@@ -274,10 +275,37 @@ class _Window:
     def title(self, title):
         self._title = title
         self._window.title(self._title)
-    @title.deleter
-    def title(self, title):
-        self._title = self.interface.title
-        self._window.title(self._title)
+    @property
+    def size(self):
+        return self._size
+    @size.setter
+    def size(self, size):
+        self._size = size
+        self._window.geometry(f"{self._size[0]}x{self._size[1]}")
+    @property
+    def pos(self):
+        return self._pos
+    @pos.setter
+    def pos(self, pos):
+        if pos == "auto": pos = None
+        self._pos = pos
+        if self.pos:
+            if self._pos != "center":
+                self._window.geometry(f"{self._size[0]}x{self._size[1]}"+(f"+{self._pos[0]}+{self._pos[1]}" if self._pos else ""))
+            else:
+                self._window.geometry(f"{self._size[0]}x{self._size[1]}+{int(self._window.winfo_screenwidth()/2 - self._size[0]/2)}+{int((self._window.winfo_screenheight()-20)/2 - (self._size[1]+10)/2)}")
+    @property
+    def icon(self):
+        return self._iconPath
+    @icon.setter
+    def icon(self, iconPath):
+        self._iconPath = ((self.app.path+"/"+iconPath) if not iconPath.startswith("c:/") and not iconPath.startswith("/") else iconPath) if iconPath else self.app.path+"/icon.ico"
+        try:
+            self._window.iconbitmap(self._iconPath)
+        except tk._tkinter.TclError as e:
+            raise e
+            self._iconPath = "./defaultIcon.ico"
+            self._window.iconbitmap(self._iconPath)
     def run(self, script: str = ...):
         if script == Ellipsis:
             self.app.get_script()(self)
