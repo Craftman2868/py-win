@@ -163,6 +163,12 @@ Cette classe n'a aucune methodes
 |type|str|Type du MetaWidget|
 |args|dict|Arguments du MetaWidget|
 
+Pour récupéré un widget, donnez lui un tag avec la propriété `tag` des widgets et utilisez la syntax suivante:
+
+```python
+widget = window["widgetTag"]
+```
+
 Documentation YAML
 
 |Nom|Format|Obligatoire|Description|
@@ -170,9 +176,9 @@ Documentation YAML
 |title|\<str\>|Non|Titre de la fenêtre|
 |size|"\<int\>, \<int\>"|Non|Taille de la fenêtre|
 |pos|"\<int\>, \<int\>"|Non|Position de la fenêtre|
-|icon|"\<str\>"|Non|Icon de la fenêtre|
+|icon|\<str\>|Non|Icon de la fenêtre|
 
-Autres options
+Autres propriétés
 
 - Events\<list\<list/str\>\>
 
@@ -201,7 +207,7 @@ events:
 |disabled|\<bool\>|Non|S'il est à true le widget est grisé et devient inactif|
 |action|\<str\>|Non|Action liée au widget|
 
-Autres options d'un widget
+Autres propriétés d'un widget
 
 - Events\<list\<list/str\>\>
 
