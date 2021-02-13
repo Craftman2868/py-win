@@ -132,6 +132,8 @@ Cette classe n'a pas de methodes
 |clear|-|-|Efface la valeur de la variable du widget (s'il à une variable)|
 |delete|-|-|Supprime le widget|
 |focus|-|-|Focus le widget en question|
+|disable|-|-|Désactive le widget|
+|enable|-|-|Active le widget|
 
 - Attributs
 
@@ -165,7 +167,7 @@ Documentation YAML
 
 |Nom|Format|Obligatoire|Description|
 |---|------|-----------|-----------|
-|title|"\<str\>"|Non|Titre de la fenêtre|
+|title|\<str\>|Non|Titre de la fenêtre|
 |size|"\<int\>, \<int\>"|Non|Taille de la fenêtre|
 |pos|"\<int\>, \<int\>"|Non|Position de la fenêtre|
 |icon|"\<str\>"|Non|Icon de la fenêtre|
@@ -176,8 +178,8 @@ Autres options
 
 |Format|Description|
 |------|-----------|
-|"\<str\>"|Nom de l'evenement|
-|"\<str\>"|Script à appeller quand l'evenement survient|
+|\<str\>|Nom de l'evenement|
+|\<str\>|Script à appeller quand l'evenement survient|
 
 ex:
 
@@ -192,9 +194,12 @@ events:
 
 |Nom|Format|Obligatoire|Description|
 |---|------|-----------|-----------|
-|type|"\<str\>"|Oui|Type du widget|
-|text|"\<str\>"|Non|Texte du widget|
-|action|"\<str\>"|Non|Action liée au widget|
+|type|\<str\>|Oui|Type du widget|
+|text|\<str\>|Non|Texte du widget|
+|pos|"grid \<int\> \<int\>"/"pack \[str\]"/"place \<int\> \<int\>"|Non|Manière dont le widget doit être positionné|
+|tag|\<str\>|Non|Tag du widget|
+|disabled|\<bool\>|Non|S'il est à true le widget est grisé et devient inactif|
+|action|\<str\>|Non|Action liée au widget|
 
 Autres options d'un widget
 
@@ -202,8 +207,8 @@ Autres options d'un widget
 
 |Format|Description|
 |------|-----------|
-|"\<str\>"|Nom de l'evenement|
-|"\<str\>"|Commande à appeller quand l'evenement survient|
+|\<str\>|Nom de l'evenement|
+|\<str\>|Commande à appeller quand l'evenement survient|
 
 ex:
 

@@ -30,9 +30,15 @@ class _Widget:
         self.var = tk.StringVar() if self.type in ["entry", "text", "label"] else None
         if self.var: self.args["textvariable"] = self.var
         self.binds = []
-        if "text" in self.args and self.var:
-            self.var.set(self.args["text"])
+        if "disabled" in meta.args:
+            del self.args["disabled"]
+            if meta.args["disabled"]:
+                self.args["state"] = "disabled"
+            else:
+                self.args["state"] = "normal"
+        if "text" in meta.args and self.var:
             del self.args["text"]
+            self.var.set(meta.args["text"])
         if "pos" in meta.args:
             del self.args["pos"]
             pos = meta.args["pos"]
@@ -89,6 +95,10 @@ class _Widget:
         if self.var: self.set_value("")
     def focus(self):
         self.window._widgets[self.window.widgets.index(self)].focus()
+    def disable(self):
+        self.window._widgets[self.window.widgets.index(self)]["state"] = "disabled"
+    def enable(self):
+        self.window._widgets[self.window.widgets.index(self)]["state"] = "normal"
     def delete(self):
         self.window._delete_widget(self)
         if self.id == _Widget.nextId-1: _Widget.nextId -= 1
