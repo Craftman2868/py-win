@@ -47,7 +47,7 @@ widgets:
 -
 <img src="ex2.png" width="150">
 
-Documentation
+Documentation python
 
 Classes
 
@@ -160,3 +160,58 @@ Cette classe n'a aucune methodes
 |app|App|Application du MetaWidget|
 |type|str|Type du MetaWidget|
 |args|dict|Arguments du MetaWidget|
+
+Documentation YAML
+
+|Nom|Format|Obligatoire|Description|
+|---|------|-----------|-----------|
+|title|"\<str\>"|Non|Titre de la fenêtre|
+|size|"\<int\>, \<int\>"|Non|Taille de la fenêtre|
+|pos|"\<int\>, \<int\>"|Non|Position de la fenêtre|
+|icon|"\<str\>"|Non|Icon de la fenêtre|
+
+Autres options
+
+- Events\<list\<list/str\>\>
+
+|Format|Description|
+|------|-----------|
+|"\<str\>"|Nom de l'evenement|
+|"\<str\>"|Script à appeller quand l'evenement survient|
+
+ex:
+
+```YAML
+events:
+  - Return my_script
+  - - space
+    - my_other_script
+```
+
+- Widgets\<list\<dict\>\>
+
+|Nom|Format|Obligatoire|Description|
+|---|------|-----------|-----------|
+|type|"\<str\>"|Oui|Type du widget|
+|text|"\<str\>"|Non|Texte du widget|
+|action|"\<str\>"|Non|Action liée au widget|
+
+Autres options d'un widget
+
+- Events\<list\<list/str\>\>
+
+|Format|Description|
+|------|-----------|
+|"\<str\>"|Nom de l'evenement|
+|"\<str\>"|Commande à appeller quand l'evenement survient|
+
+ex:
+
+```YAML
+widgets:
+  - type: text
+    events:
+      - - Return
+        - my_command
+      - space my_other_command
+```
