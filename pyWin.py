@@ -76,7 +76,7 @@ class _Widget:
                 self.binds.append(("Return", meta.args["action"]))
         if "tag" in meta.args:
             del self.args["tag"]
-            self.tag = meta.args["tag"]
+            self.tag = str(meta.args["tag"])
             self.window._tags[self.tag] = self
     @property
     def checked(self):
@@ -346,7 +346,10 @@ class _Window:
         del self.app.windows[self.app.windows.index(self)]
         self._window.destroy()
     def __getitem__(self, item):
-        return self._tags[item]
+        if type(item) == str:
+            return self._tags[item]
+        else:
+            return self.widgets[item]
 
 class App:
     def __init__(self, path):

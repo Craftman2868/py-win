@@ -169,6 +169,12 @@ Pour récupéré un widget, donnez lui un tag avec la propriété `tag` des widg
 widget = window["widgetTag"]
 ```
 
+Vous pouvez aussi le récupérer avec son id en utilisant la syntax suivante:
+
+```python
+widget = window[widgetId]
+```
+
 Documentation YAML
 
 |Nom|Format|Obligatoire|Description|

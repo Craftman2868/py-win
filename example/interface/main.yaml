@@ -5,6 +5,5 @@ widgets:
   - type: entry
     action: valid
     tag: command
-    disabled: true
   - type: label
     tag: result
