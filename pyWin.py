@@ -28,7 +28,9 @@ class _Widget:
         self.type = meta.type
         self.args = meta.args.copy()
         self.var = tk.StringVar() if self.type in ["entry", "text", "label"] else None
+        self.intVar = tk.IntVar() if self.type in ["checkbutton"] else None
         if self.var: self.args["textvariable"] = self.var
+        if self.intVar: self.args["variable"] = self.intVar
         self.binds = []
         if "disabled" in meta.args:
             del self.args["disabled"]
@@ -76,6 +78,9 @@ class _Widget:
             del self.args["tag"]
             self.tag = meta.args["tag"]
             self.window._tags[self.tag] = self
+    @property
+    def checked(self):
+        return bool(self.type == "checkbutton" and self.intVar.get())
     def set(self, key, value):
         if key == "text" and self.var:
             self.var.set(value)
