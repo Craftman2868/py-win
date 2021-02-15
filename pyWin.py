@@ -8,15 +8,11 @@ class InvalidEventError(Exception): pass
 class ScriptNotFoundError(Exception): pass
 class CommandNotFoundError(ScriptNotFoundError): pass
 
-def _get_if_exist(dict, key, or_ = None):
-    try: return dict[key]
-    except KeyError: return or_
-
 class _MetaWidget:
-    def __init__(self, app, type, **kwargs):
+    def __init__(self, app, type, lang, **kwargs):
         self.app = app
         self.type = type.lower()
-        self.args = kwargs
+        self.args = dict({(k, lang.get(v)) for k, v in kwargs.items()})
 
 class _Widget:
     nextId = 0
@@ -173,18 +169,45 @@ class _TextWidget(tk.Text):
         if self._textvariable is not None:
             self._textvariable.set(self.get("1.0", "end-1c"))
 
+class _Lang:
+    def __init__(self, path):
+        if not path: self.data = {}
+        else:
+            try:
+                with open(path, "r") as f: self.data = safe_load(f) or {}
+            except FileNotFoundError:
+                raise FileNotFoundError(f"No such file or directory: '{path}'")
+    def get(self, name):
+        if type(name) == str and name[0] == "$" and name[-1] == "$" and name[1:-1] in super().__getattribute__("data"):
+            return self[name[1:-1]]
+        else:
+            return name
+    def __getattribute__(self, name):
+        if name == "get": return super().__getattribute__("get")
+        try:
+            return super().__getattribute__("data")[name]
+        except KeyError:
+            return None
+    def __getitem__(self, name):
+        try:
+            return super().__getattribute__("data")[name]
+        except KeyError:
+            return None
+
 class _Interface:
-    def __init__(self, app, path):
+    def __init__(self, app, path, lang=None):
         try:
             with open(path, "r") as f: data = safe_load(f) or {}
         except FileNotFoundError:
             raise FileNotFoundError(f"No such file or directory: '{path}'")
-        self.title = _get_if_exist(data, "title", "PyWinApp")
-        self.icon = _get_if_exist(data, "icon", None)
-        self.events = _get_if_exist(data, "events", [])
-        size = _get_if_exist(data, "size", "200, 200").split(",")
+        self.path = path
+        self.lang = lang or _Lang(None)
+        self.title = self.lang.get(data.get("title", "PyWinApp"))
+        self.icon = self.lang.get(data.get("icon", None))
+        self.events = data.get("events", [])
+        size = data.get("size", "200, 200").split(",")
         self.size = (int(size[0].strip()), int(size[1].strip()))
-        pos = _get_if_exist(data, "pos", None)
+        pos = data.get("pos")
         if pos:
             if pos == "center":
                 self.pos = "center"
@@ -197,13 +220,13 @@ class _Interface:
             self.pos = None
         self.widgets = []
         i = 0
-        for w in _get_if_exist(data, "widgets", []):
+        for w in data.get("widgets", []):
             try:
                 type = w["type"]
                 del w["type"]
             except KeyError:
                 raise InvalidWidgetError(f"Invalid widget with id {i}")
-            self.widgets.append(_MetaWidget(app, type, **w))
+            self.widgets.append(_MetaWidget(app, type, self.lang, **w))
 
 class _Window:
     def __init__(self, app, interface):
@@ -214,6 +237,7 @@ class _Window:
         else:
             self._window = tk.Tk()
         self.interface = interface
+        self.lang = interface.lang
         self._title = interface.title
         self._iconPath = ((self.app.path+"/"+interface.icon) if not interface.icon.startswith("c:/") and not interface.icon.startswith("/") else interface.icon) if interface.icon else self.app.path+"/icon.ico"
         self._size = interface.size
@@ -284,7 +308,7 @@ class _Window:
         return self._title
     @title.setter
     def title(self, title):
-        self._title = title
+        self._title = self.lang.get(title)
         self._window.title(self._title)
     @property
     def size(self):
@@ -310,12 +334,62 @@ class _Window:
         return self._iconPath
     @icon.setter
     def icon(self, iconPath):
+        if iconPath: iconPath = self.lang.get(iconPath)
         self._iconPath = ((self.app.path+"/"+iconPath) if not iconPath.startswith("c:/") and not iconPath.startswith("/") else iconPath) if iconPath else self.app.path+"/icon.ico"
         try:
             self._window.iconbitmap(self._iconPath)
         except tk._tkinter.TclError:
             self._iconPath = os.path.join(sys.path[0], "./defaultIcon.ico")
             self._window.iconbitmap(self._iconPath)
+    def set_lang(self, lang=None, callback=None):
+        self.interface = interface = _Interface(self.app, self.interface.path, lang)
+
+        self.lang = interface.lang
+        self._title = interface.title
+        self._iconPath = ((self.app.path+"/"+interface.icon) if not interface.icon.startswith("c:/") and not interface.icon.startswith("/") else interface.icon) if interface.icon else self.app.path+"/icon.ico"
+
+        self._window.title(self._title)
+        try:
+            self._window.iconbitmap(self._iconPath)
+        except tk._tkinter.TclError:
+            self._iconPath = os.path.join(sys.path[0], "./defaultIcon.ico")
+            self._window.iconbitmap(self._iconPath)
+
+        self.widgets = []
+        for mw in interface.widgets:
+            self.widgets.append(_Widget(self, mw))
+
+        for _w in self._widgets:
+            _w.destroy()
+
+        self._widgets = []
+        for w in self.widgets:
+            try:
+                if w.type == "text":
+                    self._widgets.append(_TextWidget(self._window, **w.args))
+                else:
+                    self._widgets.append(tk.Widget(self._window, w.type, kw=w.args))
+            except tk._tkinter.TclError as e:
+                if e.args[0].startswith("invalid command name"):
+                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
+                else:
+                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, "+e.args[0].replace('"', "'"))
+            _w = self._widgets[-1]
+            for b in w.binds:
+                if type(b) == str:
+                    b = b.split(" ")
+                try:
+                    self._widgets[-1].bind("<"+b[0]+">", lambda e, w=w: self.cmd(b[1], w))
+                except tk._tkinter.TclError:
+                    raise InvalidEventError(f"Invalid event '{b[0]}'")
+        for w, _w in zip(self.widgets, self._widgets):
+            if w.pos[0] == "pack":
+                _w.pack(side=w.pos[1])
+            elif w.pos[0] == "place":
+                _w.place(x=w.pos[1], y=w.pos[2])
+            elif w.pos[0] == "grid":
+                _w.grid(row=w.pos[1], column=w.pos[2])
+        if callback: callback()
     def run(self, script: str = ...):
         if script == Ellipsis:
             self.app.get_script()(self)
@@ -359,8 +433,10 @@ class App:
     @property
     def root(self):
         return self.windows[0] if len(self.windows) >= 1 else None
-    def get_interface(self, name):
-        return _Interface(self, self.path+"/interface/"+name+".yaml")
+    def get_lang(self, name):
+        return _Lang(self.path+"/lang/"+name+".yaml")
+    def get_interface(self, name, lang=None):
+        return _Interface(self, self.path+"/interface/"+name+".yaml", lang)
     def create_window(self, interface: _Interface):
         return _Window(self, interface)
     def get_command(self, command):

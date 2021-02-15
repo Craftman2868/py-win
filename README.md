@@ -11,32 +11,58 @@ from pyWin import App
 
 class App(App):
     def run(self):
-        mainInterface = self.get_interface("main")
+        en = self.get_lang("en")
+        mainInterface = self.get_interface("main", en)
         window = self.create_window(mainInterface)
+        window["command"].focus()
 
         window.open()
     def command_valid(self, window, widget):
-        command = widget.get_value()
+        command = window["command"].get_value()
+        window["result"].set("bg", "SystemButtonFace")
         window["result"].set("fg", "black")
-        if command == "exit":
-            window.close()
-        elif command == "test":
-            window["result"].set_value("Test")
+        window["command"].clear()
+        if command != "":
+            if command == "exit":
+                window.close()
+            elif command == "test":
+                window["result"].set_value("Test")
+            elif command == "lang":
+                window.set_lang()
+            elif command.startswith("lang "):
+                window.set_lang(self.get_lang(command[5:] or None)) 
+            else:
+                window["result"].set("bg", "red")
+                window["result"].set("fg", "white")
+                window["result"].set_value("Command not found")
         else:
-            window["result"].set("fg", "red")
-            window["result"].set_value("Command not found")
+            window["result"].clear()
 ```
 
 - `c:/example/interface/main.yaml`
 
 ```yaml
-title: Command
+title: $title$
+pos: center
 
 widgets:
   - type: entry
     action: valid
+    tag: command
   - type: label
     tag: result
+```
+
+- `c:/example/lang/fr.yaml`
+
+```yaml
+title: Commande
+```
+
+- `c:/example/interface/en.yaml`
+
+```yaml
+title: Command
 ```
 
 - Command : `python pyWin.py c:/example`
@@ -57,7 +83,8 @@ Classes
 
 |Nom|Arguments|Resultat|Description|
 |---|---------|--------|-----------|
-|get_interface|str name|Interface|Récupère une interface|
+|get_lang|str name|Lang|Récuère une langue|
+|get_interface|str name, [Lang lang]|Interface|Récupère une interface|
 |create_window|Interface interface|Window|Crée une fenêtre|
 |get_command|str command|func|Retourne une commande ou déclanche une exception CommandNotFoundError si la commande est introuvable|
 |get_script|str script|func|Retourne un script ou déclanche une exception ScriptNotFoundError si le script est introuvable|
@@ -83,6 +110,7 @@ Classes
 
 |Nom|Arguments|Resultat|Description|
 |---|---------|--------|-----------|
+|set_lang|[str name], [func callback]|-|Change la langue de la fenêtre|
 |run|[str script]|-|Lance un script (ou le script par default si aucun script est passé en argument)|
 |cmd|str command, Widget widget|-|Lance une commande|
 |create_widget|str type, [kwargs, ...]|Widget|Crée un widget et le retourne|
@@ -95,6 +123,7 @@ Classes
 |---|----|-----------|
 |app|App|Application de la fenêtre|
 |interface|Interface|Interface de la fenêtre|
+|lang|Lang|Langue de la fenêtre|
 |widgets|list\<Widget\>|Widgets de la fenêtre|
 |title|str|Titre de la fenêtre|
 |size|tuple(int, int)|Taille de la fenêtre|
@@ -111,12 +140,26 @@ Cette classe n'a pas de methodes
 
 |Nom|Type|Description|
 |---|----|-----------|
+|path|str|Chemin de l'interface|
+|lang|Lang|Langue de la fenêtre|
 |title|str|Titre de la fenêtre|
 |icon|str|Chemin de l'icon de la fenêtre|
 |events|list\<list/str\>|Liste des evenements liés à la fenêtre|
 |size|tuple(int, int)|Taille de la fenêtre|
 |pos|tuple(int, int)|Position de la fenêtre|
 |widgets|list\<MetaWidgets\>|Widgets de la fenêtre|
+
+> Lang
+
+- Methodes
+
+|Nom|Arguments|Resultat|Description|
+|---|---------|--------|-----------|
+|get|str name|str|Retourne le mot dans la langue|
+
+- Attributs
+
+Cette class n'a pas d'attributs
 
 > Widget
 
@@ -153,7 +196,7 @@ Cette classe n'a pas de methodes
 
 - Methodes
 
-Cette classe n'a aucune methodes
+Cette classe n'a pas de methodes
 
 - Attributs
 
