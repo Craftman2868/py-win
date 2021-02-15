@@ -12,7 +12,9 @@ class _MetaWidget:
     def __init__(self, app, type, lang, **kwargs):
         self.app = app
         self.type = type.lower()
-        self.args = dict({(k, lang.get(v)) for k, v in kwargs.items()})
+        self.args = {}
+        for k, v in kwargs.items():
+            self.args[k] = lang.get(v)
 
 class _Widget:
     nextId = 0
@@ -24,10 +26,13 @@ class _Widget:
         self.type = meta.type
         self.args = meta.args.copy()
         self.var = tk.StringVar() if self.type in ["entry", "text", "label"] else None
-        self.intVar = tk.IntVar() if self.type in ["checkbutton"] else None
+        self.intVar = tk.IntVar() if self.type in ["checkbutton", "scale"] else None
         if self.var: self.args["textvariable"] = self.var
         if self.intVar: self.args["variable"] = self.intVar
         self.binds = []
+        if "from" in meta.args and self.type == "scale":
+            del self.args["from"]
+            self.args["from_"] = meta.args["from"]
         if "disabled" in meta.args:
             del self.args["disabled"]
             if meta.args["disabled"]:
@@ -66,7 +71,7 @@ class _Widget:
                 self.binds.append(e)
         if "action" in meta.args:
             del self.args["action"]
-            if self.type == "button":
+            if self.type in ["button", "scale"]:
                 self.args["command"] = lambda: self.window.cmd(meta.args["action"], self)
             elif self.type in ["entry", "text", "label"]:
                 self.binds.append(("Return", meta.args["action"]))
@@ -86,8 +91,10 @@ class _Widget:
         self.window._widgets[self.window.widgets.index(self)].config(**{key: value})
     def get_value(self):
         if self.var: return self.var.get()
+        if self.intVar: return self.intVar.get() 
     def set_value(self, value):
         if self.var: self.var.set(value)
+        if self.intVar: self.intVar.set(value)
     def insert(self, text):
         if self.var: self.set_value(self.get_value()+text)
     def back(self, n=1):
@@ -281,7 +288,7 @@ class _Window:
                 if e.args[0].startswith("invalid command name"):
                     raise InvalidWidgetError(f"Invalid widget with id {w.id}, type '{w.type}' not found")
                 else:
-                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, "+e.args[0].replace('"', "'"))
+                    raise InvalidWidgetError(f"Invalid widget with id {w.id}, "+e.args[0].replace('"', "'").replace("'-", "'"))
             _w = self._widgets[-1]
             for b in w.binds:
                 if type(b) == str:
