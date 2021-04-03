@@ -69,9 +69,9 @@ title: Command
 
 - Résultat
 
-<img src="ex1.png" width="150">
+![alt text](ex2.png)
 -
-<img src="ex2.png" width="150">
+![alt text](ex2.png)
 
 Documentation python
 

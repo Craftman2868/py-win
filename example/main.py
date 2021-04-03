@@ -1,5 +1,6 @@
 from pyWin import App
 
+
 class App(App):
     def run(self):
         fr = self.get_lang("fr")
@@ -8,6 +9,7 @@ class App(App):
         window["command"].focus()
 
         window.open()
+
     def command_valid(self, window, widget):
         command = window["command"].get_value()
         window["result"].set("bg", "SystemButtonFace")
@@ -21,7 +23,7 @@ class App(App):
             elif command == "lang":
                 window.set_lang()
             elif command.startswith("lang "):
-                window.set_lang(self.get_lang(command[5:] or None)) 
+                window.set_lang(self.get_lang(command[5:] or None))
             else:
                 window["result"].set("bg", "red")
                 window["result"].set("fg", "white")

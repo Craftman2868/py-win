@@ -1,5 +1,6 @@
 from pyWin import App
 
+
 class App(App):
     def run(self):
         enLang = self.get_lang("en")
